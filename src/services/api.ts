@@ -16,17 +16,16 @@ export interface ExtractTextParams {
 
 export const ocrService = {
   /**
-   * Extract text from an image or PDF using Tesseract OCR
+   * Extract text from an image or PDF using unified multi-format endpoint
    */
   extractText: async (params: ExtractTextParams): Promise<OCRResponse> => {
     const formData = new FormData();
     
-    // Use different endpoint and field name for PDFs
-    const isPDF = params.image.type === 'application/pdf';
-    const endpoint = isPDF ? '/api/v1/ocr/multi-format/extract/' : '/api/v1/ocr/extract/';
-    const fieldName = isPDF ? 'file' : 'image';
+    // Unified endpoint for all file types (auto-detects images/PDFs)
+    const endpoint = '/api/v1/ocr/extract/';
     
-    formData.append(fieldName, params.image);
+    // Always use 'file' as field name for the unified endpoint
+    formData.append('file', params.image);
     formData.append('language', params.language);
     if (params.saveToDb !== undefined) {
       formData.append('save_to_db', params.saveToDb.toString());
@@ -38,19 +37,12 @@ export const ocrService = {
       size: params.image.size,
       language: params.language,
       saveToDb: params.saveToDb,
-      endpoint,
-      fieldName
+      endpoint
     });
 
     try {
       const response = await apiClient.post<OCRResponse>(endpoint, formData);
       console.log('OCR response received:', response.data);
-      
-      // Backend returns {image: {text, confidence, ...}} for PDFs
-      const data: any = response.data;
-      if (data.image) {
-        return data.image;
-      }
       
       return response.data;
     } catch (error: any) {
